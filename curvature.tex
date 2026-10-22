@@ -1,0 +1,292 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{microtype}
+\usepackage{newpxtext, newpxmath}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\definecolor{inkblue}{HTML}{1F3A5F}
+\definecolor{boxbg}{HTML}{F2F5F9}
+\definecolor{boxrule}{HTML}{8AA4C4}
+
+\titleformat{\section}{\large\bfseries\color{inkblue}}{}{0em}{}
+\titlespacing{\section}{0pt}{1.4em}{0.5em}
+
+\newtcolorbox{insight}{
+  colback=boxbg, colframe=boxrule, boxrule=0.6pt,
+  arc=2pt, left=10pt, right=10pt, top=8pt, bottom=8pt,
+  breakable, enhanced,
+  title={\textbf{Insight}}, coltitle=inkblue, fonttitle=\bfseries\small,
+  attach title to upper=\hspace{0.6em}
+}
+
+\newtcolorbox{summary}{colback=yellow!18, colframe=yellow!55!black, arc=2pt, boxrule=0.5pt,
+  breakable, left=10pt, right=10pt, top=8pt, bottom=8pt}
+
+\setlength{\parskip}{0.55em}
+\setlength{\parindent}{0pt}
+
+\title{\color{inkblue}\bfseries Curvature}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\begin{summary}
+The KL-divergence measures the gap between two distributions. Ask what that gap looks like when
+the two are only a hair apart, and the answer is a \emph{bowl}: flat at the bottom, curving
+upward. The curvature of that bowl is the \textbf{Fisher information}, and because it is a
+symmetric, positive-definite quantity that varies smoothly from place to place, it is exactly a
+\textbf{Riemannian metric} --- a ruler on the space of distributions. This note derives the
+bowl, identifies its curvature as Fisher, works it out for a coin, and shows why the curvature
+\emph{is} a metric.
+\end{summary}
+
+This is a companion to \emph{Surprise}, which built entropy, cross-entropy, and the
+KL-divergence from scratch and showed that a model's loss is the KL plus a constant. Everything
+here takes the KL as known and asks one new question: what does it look like up close?
+
+\section{The gap, when the two distributions are a hair apart}
+
+Fix a family of distributions controlled by a knob $\theta$. Turning the knob sweeps out
+different distributions: for a coin, $\theta$ is the bias $p$; for a language model, the logits.
+Write $q_\theta$ for the distribution at setting $\theta$, and look at the gap between the
+distribution at $\theta$ and the one a tiny step $\delta$ further on:
+\[
+  D_{\mathrm{KL}}\big(q_\theta \,\|\, q_{\theta+\delta}\big) \qquad\text{as a function of the small step }\delta.
+\]
+Two facts you already know fix the shape of this function completely:
+\begin{itemize}[leftmargin=1.4em]
+  \item it is \textbf{zero when $\delta = 0$} --- a distribution measured against itself has no gap;
+  \item it is \textbf{never negative} --- the KL is a gap above a floor.
+\end{itemize}
+A function that sits at zero and cannot go below it is sitting at the \emph{bottom of a bowl}.
+
+\section{The bowl and its curvature}
+
+Here is the one fact from calculus that does all the work. \emph{Near the bottom of a smooth
+bowl, every function looks like a parabola.} Two things describe it there: the bottom is
+\textbf{flat} (the slope is zero, which is what ``bottom'' means), and the sides curve upward at
+some rate --- the \textbf{curvature}, measured by the second derivative. The flatness we already
+have for free; the only content left in the gap-for-a-tiny-step is \emph{how sharply it curves}.
+
+That curvature is the Fisher information. The whole of ``infinitesimal KL $=$ Fisher'' is this
+single sentence:
+\begin{center}
+\emph{the curvature of the KL bowl at its bottom is the Fisher information.}
+\end{center}
+The rest of this section is just checking that the bowl really is a parabola and reading off its
+curvature.
+
+\subsection*{The computation, with one knob}
+
+Write $\ell_\theta(x) = \log q_\theta(x)$ for the log-probability, and let a prime denote
+$\partial/\partial\theta$. Straight from the definition of KL,
+\[
+  D_{\mathrm{KL}}(q_\theta \| q_{\theta+\delta})
+    = \sum_x q_\theta(x)\,\log\frac{q_\theta(x)}{q_{\theta+\delta}(x)}
+    = -\,\mathbb{E}_\theta\big[\ell_{\theta+\delta} - \ell_\theta\big].
+\]
+Taylor-expand the bracket in the small step $\delta$, using
+$\ell_{\theta+\delta} = \ell_\theta + \delta\,\ell'_\theta + \tfrac12\delta^2\,\ell''_\theta +
+\cdots$:
+\[
+  D_{\mathrm{KL}}(q_\theta \| q_{\theta+\delta})
+    = -\,\delta\,\underbrace{\mathbb{E}_\theta[\ell'_\theta]}_{\text{first order}}
+      \;-\;\tfrac12\delta^2\,\underbrace{\mathbb{E}_\theta[\ell''_\theta]}_{\text{second order}}
+      \;+\;\cdots
+\]
+
+\textbf{The first-order term vanishes}, and for the same ``the probabilities always sum to one''
+reason that runs through the whole subject:
+\[
+  \mathbb{E}_\theta[\ell'_\theta]
+    = \sum_x q_\theta\,\frac{q'_\theta}{q_\theta}
+    = \sum_x q'_\theta
+    = \frac{d}{d\theta}\sum_x q_\theta
+    = \frac{d}{d\theta}(1)
+    = 0.
+\]
+This is the flat bottom of the bowl, confirmed. What survives is the curvature:
+\begin{summary}
+\[
+  D_{\mathrm{KL}}(q_\theta \| q_{\theta+\delta}) \;=\; \tfrac12\,g(\theta)\,\delta^2 + O(\delta^3),
+  \qquad
+  g(\theta) \;=\; -\,\mathbb{E}_\theta[\ell''_\theta] \;=\; \mathbb{E}_\theta\big[(\ell'_\theta)^2\big].
+\]
+\end{summary}
+This $g(\theta)$ is the \textbf{Fisher information}. The two expressions for it are equal:
+differentiate the identity $\sum_x q_\theta\,\ell'_\theta = 0$ once more with respect to
+$\theta$, use $q'_\theta = q_\theta\,\ell'_\theta$, and
+$\mathbb{E}[(\ell')^2] = -\mathbb{E}[\ell'']$ drops out.
+
+\begin{insight}
+The second form, $g = \mathbb{E}[(\ell')^2]$, says what Fisher \emph{means}. The quantity
+$\ell' = \partial \log q / \partial\theta$ is the \textbf{score}: how sharply the probabilities
+react when you wiggle the knob. Since the score averages to zero, $g$ is its \emph{variance} ---
+the typical size of that reaction. Large $g$: the distribution lurches when you nudge $\theta$,
+so nearby settings are easy to tell apart and the bowl is steep. Small $g$: nudging $\theta$
+barely changes anything, settings are nearly indistinguishable, and the bowl is shallow. That is
+why it is called \emph{information} --- it is how much a single observation tells you about
+$\theta$.
+\end{insight}
+
+\section{The coin, concretely}
+
+Take the biased coin of \emph{Surprise}, with the knob $\theta$ being the bias $p$. The two
+outcomes have log-probabilities $\log p$ (heads) and $\log(1-p)$ (tails), so the score is $1/p$
+on heads and $-1/(1-p)$ on tails, and the Fisher information is the average of its square:
+\[
+  g(p) = p\cdot\frac{1}{p^2} + (1-p)\cdot\frac{1}{(1-p)^2}
+       = \frac1p + \frac{1}{1-p}
+       = \frac{1}{p(1-p)}.
+\]
+Read it off. At a fair coin ($p = \tfrac12$) the curvature is $g = 4$, the \emph{smallest} it
+ever gets: the bowl is shallowest there, and two nearly-fair coins are the hardest of all to
+tell apart. As $p$ runs toward $0$ or $1$ the curvature $g \to \infty$: the bowl walls go
+vertical, and two coins near the edge --- $0.99$ versus $0.999$ heads --- are enormously far
+apart in KL, because the rare outcome is so informative on the occasions it finally appears.
+
+\begin{insight}
+This is why the space of distributions is \emph{curved} rather than flat. The same step $\delta$
+in $p$ counts as a tiny distance near $\tfrac12$ and a huge one near the edges --- the ruler
+itself stretches as you move around. A ruler whose length changes from place to place is exactly
+what a curved space is. Fisher is the thing telling you how long each little step ``really'' is,
+locally.
+\end{insight}
+
+\section{Many knobs: the curvature becomes a matrix}
+
+With several knobs $\theta = (\theta_1, \dots, \theta_m)$ the bowl is multidimensional, and the
+single curvature number becomes a \textbf{matrix}. The same Taylor expansion gives
+\[
+  D_{\mathrm{KL}}(q_\theta \| q_{\theta+\delta}) \;=\; \tfrac12\,\delta^{\top} g(\theta)\,\delta + O(\|\delta\|^3),
+  \qquad
+  g_{ij}(\theta) = \mathbb{E}_\theta\big[\partial_i\ell\,\partial_j\ell\big] = -\,\mathbb{E}_\theta\big[\partial_i\partial_j\ell\big],
+\]
+the \textbf{Fisher information matrix}. The quadratic form $\delta^{\top} g\,\delta$ is the
+squared gap for a displacement $\delta$ in any direction through parameter space.
+
+\section{From curvature to a Riemannian metric}
+
+Now the last step: why this curvature is not merely \emph{like} a ruler but actually \emph{is}
+one.
+
+Stripped of jargon, a \textbf{Riemannian metric} is a rule for measuring the length of a tiny
+displacement, with two features: it is allowed to \emph{change from point to point}, and at each
+point it is a genuine squared-length rule --- a symmetric, positive-definite quadratic form (an
+inner product). Compare that against what we have. The gap for a small step is
+$\delta^{\top} g(\theta)\,\delta$, a squared length for the displacement $\delta$, and $g(\theta)$
+is:
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{symmetric} --- $g_{ij} = g_{ji}$ on sight;
+  \item \textbf{positive-definite} --- it is a covariance matrix,
+  $\mathbb{E}[\,\text{score}\cdot\text{score}^{\top}]$, hence never negative, and strictly
+  positive in every direction that genuinely changes the distribution;
+  \item \textbf{smoothly varying} --- the coin's $1/\!\left(p(1-p)\right)$ changes as $p$ moves,
+  and so does $g$ in general.
+\end{itemize}
+Those three properties \emph{are} the definition of a Riemannian metric. So the Fisher
+information is a metric tensor on the space of distributions. That space becomes a genuine curved
+surface, and the length of any path across it is obtained by adding up $\sqrt{\delta^{\top} g\,\delta}$
+along the way; the shortest such path is the \textbf{Fisher--Rao distance}, the natural,
+coordinate-free distance between two distributions.
+
+\begin{insight}
+This resolves the nagging business of calling the KL a ``distance'' when it is not.
+\emph{Globally}, KL is lopsided --- $D_{\mathrm{KL}}(P\|Q) \ne D_{\mathrm{KL}}(Q\|P)$, no triangle
+inequality, not a distance. \emph{Infinitesimally}, that asymmetry is a \emph{third}-order effect:
+it lives entirely in the $O(\delta^3)$ terms we discarded, so to second order the bowl is
+perfectly symmetric and hands back a true, symmetric metric. KL in the large is a one-way gap;
+its shadow in the small is a clean two-way ruler, and the Fisher metric is exactly that shadow.
+\end{insight}
+
+\begin{insight}
+One fact worth knowing, even without its proof. On the space of probability distributions, the
+Fisher metric is the \emph{unique} Riemannian metric --- up to an overall scale --- that is
+invariant under the operations that lose no information (Chentsov's theorem). You do not get to
+choose a metric and the geometry is not a convention: once you ask for distances between
+distributions that do not depend on how you happened to coordinatise them, it is Fisher--Rao or
+nothing.
+\end{insight}
+
+\section{A metric on the meaning manifold}
+
+One caution before the victory lap. Everything so far lives on the space of
+\emph{distributions}. But the ``meaning manifold'' of \emph{Next-Token Prediction is Geometry}
+lives somewhere else: it is the space of hidden states $h \in \mathbb{R}^d$, the context
+compressed to a point. That space has no canonical ruler of its own. The Euclidean inner product
+$\langle h, e_w\rangle$ it came with is an accident of the coordinates the network happened to
+learn --- two hidden states can be Euclidean-near yet predict entirely different next words. So we
+do not \emph{find} a metric on hidden-state space; we \textbf{borrow} one.
+
+The borrowing has a name, \emph{pullback}, and a single idea behind it: to measure the distance
+between two hidden states, do not compare them directly --- compare the \emph{distributions they
+produce}, with the Fisher metric those distributions already carry. Every hidden state $h$ emits
+an output distribution $q_h = \operatorname{softmax}(Wh)$, and a small step $dh$ produces a small
+change $dq = J\,dh$ in it, where $J = \partial q/\partial h$ is the Jacobian of the map. Fisher
+measures that change as $dq^\top g\, dq$, so the length of $dh$ is
+\[
+  dh^\top \big(J^\top g\, J\big)\, dh, \qquad \hat g(h) = J^\top g\, J.
+\]
+That sandwich --- Jacobian, Fisher, Jacobian --- is the pullback. Pushed through the logits
+$z = Wh$ (so $\partial z/\partial h = W$, and the Fisher metric in logit coordinates is
+$\operatorname{diag}(p) - p p^\top$) it becomes the concrete metric on hidden-state space:
+\begin{summary}
+\[
+  \hat g(h) \;=\; W^\top\big(\operatorname{diag}(p) - p\,p^\top\big)W, \qquad p = \operatorname{softmax}(Wh),
+\]
+\[
+  D_{\mathrm{KL}}\big(q(h) \,\|\, q(h+dh)\big) \;=\; \tfrac12\, dh^\top \hat g(h)\, dh + \cdots.
+\]
+\end{summary}
+It is the bowl of this whole note re-raised on hidden-state space: the Fisher length of a step
+$dh$ is the KL gap between the next-token distributions before and after the step.
+
+\begin{insight}
+Read what $\hat g$-distance means: two hidden states are close exactly when they induce
+\emph{similar next-token distributions}. That is the distributional hypothesis --- \emph{you shall
+know a word by the company it keeps} --- turned from slogan into a Riemannian metric. And it is
+\emph{not} the Euclidean distance on $h$; it is Euclidean distance warped by how sharply the
+output reacts, the warp factor being Fisher at $p$. The flat inner-product picture of the first
+note was a chart; this is the territory.
+\end{insight}
+
+The construction is general, not a language-model trick: any map $f \colon M \to N$ from a
+manifold into a Riemannian manifold $(N, g)$ induces a \textbf{pullback metric} on $M$ by
+$(f^{*}g)(u,v) = g\big(df\,u,\, df\,v\big)$ --- measure the image of a vector, and call that the
+length of the vector. Here $M$ is hidden-state space, $N$ is the distributions with their Fisher
+metric, and $f = \operatorname{softmax}\circ\,W$. Equivalently --- and this is ``a metric on the
+sub-manifold'' said directly --- the image $\{q_h\}$ is a submanifold of the simplex and inherits
+Fisher by \emph{restriction}; the pullback to $h$-space and the restriction to the image are the
+same metric, written in two charts.
+
+Two honest caveats finish the picture.
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{It can be degenerate.} A step $dh$ that shifts every logit by the same amount
+  leaves the distribution unchanged --- the softmax gauge freedom --- so it has zero
+  $\hat g$-length. The metric is strictly positive-definite only on the directions that actually
+  move the output; the invisible directions are genuinely invisible to this ruler.
+  \item \textbf{Flat ambient, curved slice.} The full simplex is dually flat, but the image the
+  network sweeps out is in general a \emph{curved} submanifold of it; its embedding curvature
+  measures how far the model's own family is from being an exponential family in its own right.
+\end{itemize}
+
+\section{The chain, in one line}
+
+\begin{summary}
+KL measures a gap $\rightarrow$ look at the gap for a tiny step $\rightarrow$ it is a bowl with a
+flat bottom $\rightarrow$ the bowl's curvature is the Fisher information $\rightarrow$ that
+curvature, symmetric and positive-definite and smoothly varying, is a Riemannian metric
+$\rightarrow$ the space of distributions is a curved surface with Fisher as its ruler
+$\rightarrow$ pull that ruler back through the softmax and the model's hidden states inherit it,
+a metric under which ``near'' means ``predicts alike.''
+\end{summary}
+
+\end{document}

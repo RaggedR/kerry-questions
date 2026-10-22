@@ -1,0 +1,283 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{microtype}
+\usepackage{newpxtext, newpxmath}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\definecolor{inkblue}{HTML}{1F3A5F}
+\definecolor{boxbg}{HTML}{F2F5F9}
+\definecolor{boxrule}{HTML}{8AA4C4}
+
+\titleformat{\section}{\large\bfseries\color{inkblue}}{}{0em}{}
+\titlespacing{\section}{0pt}{1.4em}{0.5em}
+
+\newtcolorbox{insight}{
+  colback=boxbg, colframe=boxrule, boxrule=0.6pt,
+  arc=2pt, left=10pt, right=10pt, top=8pt, bottom=8pt,
+  breakable, enhanced,
+  title={\textbf{Insight}}, coltitle=inkblue, fonttitle=\bfseries\small,
+  attach title to upper=\hspace{0.6em}
+}
+
+\newtcolorbox{summary}{colback=yellow!18, colframe=yellow!55!black, arc=2pt, boxrule=0.5pt,
+  breakable, left=10pt, right=10pt, top=8pt, bottom=8pt}
+
+\setlength{\parskip}{0.55em}
+\setlength{\parindent}{0pt}
+
+\title{\color{inkblue}\bfseries The Metric the Others Were Using}
+\author{Information geometry: Fisher's metric and the dual connections of softmax}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+One could sum up this whole document in a sentence:
+\begin{summary}
+The matrix that drove the training gradient, the second-order shape of the KL-divergence, and
+the one coordinate-invariant way to measure distance between distributions are all the same
+object --- the Fisher information metric --- and the space of softmax distributions carries
+not one but a dual \emph{pair} of flat connections, one straight in logits and one straight in
+probabilities.
+\end{summary}
+This is the fourth of a set. \emph{Next-Token Prediction is Geometry} built the Euclidean
+picture (inner products, the softmax Jacobian, the spring-law gradient); \emph{Training is a
+Monte Carlo Estimate} said what the loss measures (cross-entropy, KL); \emph{The
+Radon--Nikodym Theorem} said what the densities are. Each used a geometry on the space of
+distributions without naming it. This note names it. The field is \emph{information geometry}
+(Chentsov, Amari, Nagaoka).
+
+\section{Two manifolds, and which one carries the geometry}
+
+``The manifold'' has meant two different things, and they carry different structure:
+\begin{itemize}[leftmargin=1.4em]
+  \item the \textbf{representation manifold} --- hidden states $h$ and token embeddings $e_w$
+  as points in $\mathbb{R}^d$, the ``meaning manifold'' of the first note, a curved subset of
+  Euclidean space;
+  \item the \textbf{statistical manifold} --- the \emph{output distributions} themselves, the
+  family $\{\, q = \operatorname{softmax}(z) \,\}$ living in the probability simplex, each point
+  a complete next-token distribution.
+\end{itemize}
+The canonical geometry lives on the statistical manifold. The representation manifold inherits
+a meaningful geometry only by \emph{pulling back} from it --- the last section. We do the
+statistical manifold first, because that is where every answer is clean.
+
+\section{The Fisher metric}
+
+Parametrise a family of distributions by $\theta$ and write the log-likelihood
+$\ell_\theta = \log q_\theta$. The \emph{score} is its gradient $\partial_i \ell_\theta$, and
+the \textbf{Fisher information metric} is the covariance of the score:
+\[
+  g_{ij}(\theta) = \mathbb{E}_{q_\theta}\!\bigl[\partial_i \ell_\theta \,\partial_j \ell_\theta\bigr]
+  = -\,\mathbb{E}_{q_\theta}\!\bigl[\partial_i \partial_j \ell_\theta\bigr].
+\]
+It is symmetric and positive semi-definite --- a Riemannian metric on the space of
+distributions. Three facts turn ``a metric'' into ``\emph{the} metric,'' and the second is the
+spine of this note.
+
+\subsection*{It is the second-order shape of the KL-divergence}
+
+Expand the divergence between two nearby distributions. The first-order term vanishes (the
+divergence has a minimum of zero at coincidence), and the first surviving term is the Fisher
+quadratic form:
+\[
+  D_{\mathrm{KL}}(q_\theta \,\|\, q_{\theta+\delta})
+  = \tfrac12\, \delta^{\top} g(\theta)\, \delta + O(\lVert\delta\rVert^3).
+\]
+The KL-divergence of the companion notes is not a metric globally --- asymmetric, no triangle
+inequality --- but infinitesimally it \emph{is} one: $g$ is precisely the thing being squared.
+Distance-between-distributions and the loss we descended are the same geometry at two scales.
+
+\subsection*{For softmax it is exactly the Jacobian from the first note}
+
+Write the softmax family as the exponential family it is. With logits $z$ as parameters,
+\[
+  \ell_z(w) = \log q_z(w) = z_w - A(z), \qquad A(z) = \log \textstyle\sum_k e^{z_k},
+\]
+where $A$ --- the log-partition function --- is the $\log\sum\exp$ we keep meeting. Its gradient
+is the distribution, $\partial_i A = p_i$, so the score is $\partial_i \ell_z(w) = \delta_{iw} -
+p_i$, and the Fisher metric is its covariance:
+\[
+  g_{ij}(z) = \mathbb{E}_w\!\bigl[(\delta_{iw}-p_i)(\delta_{jw}-p_j)\bigr]
+  = p_i\,\delta_{ij} - p_i p_j
+  = \frac{\partial p_i}{\partial z_j}.
+\]
+\begin{summary}
+\[
+  g(z) \;=\; \operatorname{diag}(p) - p\,p^{\top}
+  \;=\; \nabla^2 A(z)
+  \;=\; \frac{\partial\, p}{\partial\, z}
+  \;=\; \nabla^2_{\!\delta}\, D_{\mathrm{KL}}\big|_{\delta=0}.
+\]
+The Fisher metric of the softmax family, the Hessian of $\log\sum\exp$, the softmax Jacobian
+$p_i(\delta_{ij}-p_j)$ that drove the spring law, and the second-order shape of KL are one
+matrix written four ways.
+\end{summary}
+The identity is forced, not coincidental. Softmax is the gradient of the log-partition,
+$p = \nabla A$, so its Jacobian is the Hessian $\nabla^2 A$ --- and the Hessian of a
+log-partition is by definition the covariance of the sufficient statistic, which is the Fisher
+metric. The matrix the first note computed as ``the derivative of softmax'' and used to push
+embeddings around was the metric tensor the entire time; training did differential geometry
+without declaring it.
+
+More than carried along, the metric is \emph{applied} on the backward pass. Differentiating a
+bare softmax gives $\partial L/\partial z = g\,(\partial L/\partial p)$, and since the logits
+$z$ are the natural coordinates $\theta$ and the probabilities $p$ the expectation coordinates
+$\eta$ (next section), $g = \partial\eta/\partial\theta$ is the Jacobian \emph{between the dual
+coordinate systems}. So the softmax backward pass \emph{is} the Fisher metric at work:
+converting the gradient written in probability-coordinates into the gradient written in
+logit-coordinates --- index lowering by $g$. The familiar fused simplification
+$\partial L/\partial z = p - y$ is exactly that metric multiplication, carried out in closed
+form.
+
+\begin{insight}
+One caveat keeps the identity honest, because it is the standard place to go wrong. This is
+the Fisher metric of the \emph{output distribution} in \emph{logit} coordinates --- an
+$n\times n$ matrix. It is \emph{not} the parameter-space Fisher of natural-gradient fame, the
+(parameters $\times$ parameters) matrix $F_\theta = \mathbb{E}\!\bigl[\nabla_\theta \log q\;
+\nabla_\theta \log q^{\top}\bigr]$. That one is this matrix \emph{pulled back} through the
+network,
+\[
+  F_\theta = J_{\mathrm{net}}^{\top}\,\bigl(\operatorname{diag}(p) - p\,p^{\top}\bigr)\, J_{\mathrm{net}},
+  \qquad J_{\mathrm{net}} = \partial z/\partial\theta,
+\]
+the Gauss--Newton / K-FAC factorisation, and the pullback of \S5. The bare softmax Jacobian is
+the \emph{kernel} that gets sandwiched, not the sandwich.
+\end{insight}
+
+\begin{insight}
+The metric is rank $n-1$, not $n$: adding a constant to every logit changes nothing, so
+$g$ has the all-ones vector in its null space --- the gauge freedom of softmax. On the tangent
+space of the simplex (perturbations whose entries sum to zero) it is strictly positive
+definite. The manifold is the $(n-1)$-dimensional simplex interior, and $g$ is a genuine metric
+there; the degenerate direction is only the redundancy in the coordinates.
+\end{insight}
+
+\subsection*{It is the only invariant metric (Chentsov)}
+
+Chentsov's theorem: on the simplex, the Fisher metric is the \emph{unique} Riemannian metric,
+up to an overall scale, invariant under sufficient statistics --- the maps that reparametrise
+without discarding information. If you want distance between distributions not to depend on
+arbitrary choices of coordinate, you do not get to choose: it is Fisher--Rao or nothing. This
+is what licenses the first note's whole premise that ``geometry tracks meaning'' --- there is
+exactly one invariant geometry for it to track.
+
+\section{Dual coordinates: logits and probabilities are Legendre partners}
+
+An exponential family comes with two natural coordinate systems and a duality between them.
+The \emph{natural} (canonical) parameters are the logits $\theta = z$; the \emph{expectation}
+parameters are the probabilities themselves, $\eta = \mathbb{E}_w[\text{one-hot}] = p$. They are
+related by the gradient of the log-partition and its convex conjugate:
+\[
+  \eta = \nabla A(\theta) = \operatorname{softmax}(\theta),
+  \qquad
+  A^{*}(\eta) = \sup_\theta\bigl(\langle\theta,\eta\rangle - A(\theta)\bigr)
+  = \sum_w p_w \log p_w = -H(p).
+\]
+The dual potential is the \emph{negative entropy} --- the same $H$ from the coding story. So
+the Legendre pair underneath softmax is
+\[
+  A = \log\textstyle\sum\exp \quad\longleftrightarrow\quad A^{*} = -H,
+\]
+and the Fisher metric is the Hessian of \emph{either} potential, in its own coordinates:
+$g = \nabla^2 A(\theta)$ in logit-coordinates, $g^{-1} = \nabla^2 A^{*}(\eta)$ in
+probability-coordinates. The maximum-entropy characterisation of softmax (why $\nabla A =
+\operatorname{softmax}$) and the metric are two readings of one convex duality.
+
+\section{The connections: not one, but a dual pair}
+
+Here the statistical manifold is richer than an ordinary Riemannian one. A metric alone gives
+the Levi--Civita connection --- one notion of ``straight line'' and parallel transport. An
+exponential family carries a whole one-parameter family of $\alpha$-connections, and two are
+distinguished:
+\begin{itemize}[leftmargin=1.4em]
+  \item the \textbf{exponential connection} ($e$-connection, $\alpha=+1$): its Christoffel
+  symbols \emph{vanish in the logit coordinates} $\theta$. The family is $e$-flat, and straight
+  lines \emph{in logit space} are its geodesics.
+  \item the \textbf{mixture connection} ($m$-connection, $\alpha=-1$): its Christoffel symbols
+  \emph{vanish in the probability coordinates} $\eta$. The family is $m$-flat, and straight
+  lines \emph{in probability space} are its geodesics.
+\end{itemize}
+These two are \emph{dual} with respect to the Fisher metric --- $\partial_k g_{ij} =
+\Gamma^{e}_{ki,j} + \Gamma^{m}_{kj,i}$ --- and the Levi--Civita connection is exactly their
+average, the $\alpha=0$ case. The softmax family is therefore \textbf{dually flat}: it has two
+distinct canonical notions of straightness, and the metric geodesic is neither, but their
+mean.
+
+\begin{insight}
+Dual flatness is what being an exponential family \emph{buys} geometrically, and it has teeth.
+In a dually flat manifold the KL-divergence is the \textbf{Bregman divergence} of the potential
+--- $D_{\mathrm{KL}}(p\|q)$ is the gap between $A^{*}$ at $p$ and its tangent plane at $q$ ---
+and a \textbf{generalised Pythagorean theorem} holds:
+\[
+  D_{\mathrm{KL}}(P\|R) = D_{\mathrm{KL}}(P\|Q) + D_{\mathrm{KL}}(Q\|R)
+\]
+whenever the $m$-geodesic from $P$ to $Q$ meets the $e$-geodesic from $Q$ to $R$ at a
+Fisher-orthogonal angle. That right angle is the engine under the EM algorithm, information
+projection, and variational inference: their decompositions are literal orthogonal projections
+in this metric. Parallel transport, too, splits in two --- $e$-transport carries logit-vectors,
+$m$-transport carries probability-vectors, and they are adjoint under $g$.
+\end{insight}
+
+\section{The pullback: a metric on the representation manifold}
+
+Now the $\mathbb{R}^d$ manifold of hidden states. It trivially inherits the \emph{Euclidean}
+metric of the ambient space --- that is what the inner product $\langle h, e_w\rangle$ uses ---
+but that metric is not canonical: it depends on the coordinates the network happened to learn
+and respects no invariance. The meaningful metric arrives by \emph{pulling back} the Fisher
+metric through the map that turns a hidden state into a distribution. With logits $z = Wh$ (the
+unembedding), the pulled-back metric on hidden-state space is
+\[
+  \hat g(h) = W^{\top} \bigl(\operatorname{diag}(p) - p\,p^{\top}\bigr) W,
+  \qquad p = \operatorname{softmax}(Wh),
+\]
+which is the parameter-space Fisher $F_\theta$ of \S2's caveat, restricted to the unembedding
+layer --- the bare Jacobian $\operatorname{diag}(p) - p p^{\top}$ sandwiched by $W$. It has a
+direct reading through the KL expansion of \S2:
+\[
+  D_{\mathrm{KL}}\bigl(q(h) \,\|\, q(h+dh)\bigr) = \tfrac12\, dh^{\top}\hat g(h)\, dh + \cdots.
+\]
+Two hidden states are near in $\hat g$ exactly when they induce \emph{similar next-token
+distributions}. This is the distributional hypothesis --- \emph{you shall know a word by the
+company it keeps} --- promoted from slogan to Riemannian metric: semantic distance is
+difference in predictive behaviour. And it is in general \emph{not} the Euclidean distance on
+$h$; it is the Euclidean distance warped by how sharply the output reacts, the warp factor
+being the Fisher metric at $p$.
+
+\begin{insight}
+This is the precise sense in which the first note's Euclidean picture was a chart, not the
+territory. The gradient $\partial L/\partial h = \bar e - e_y$ it derived is the
+\emph{Euclidean} gradient; the geometry-respecting update is the \emph{natural gradient}
+$\hat g^{-1}\,\partial L/\partial h$, which moves along the manifold rather than across the
+coordinates. Natural-gradient descent is ordinary gradient descent performed in the Fisher
+metric --- doing the geometry the first note only gestured at.
+\end{insight}
+
+\section{Two honest caveats}
+
+The elegance should not oversell itself.
+
+\textbf{Flat ambient, curved slice.} The full simplex is dually flat, but the submanifold the
+network actually sweeps out --- the image of $h \mapsto \operatorname{softmax}(Wh)$ --- is in
+general a \emph{curved} submanifold of it. Its embedding curvature measures how far the model's
+own family is from being an exponential family in its own right. ``Flat'' describes the ambient
+statistical manifold, not the model's slice through it.
+
+\textbf{Smoothness, and the density underneath.} All of this assumes a smooth manifold. The
+first note already flagged that the ``meaning manifold'' is loose --- ReLU kinks, varying rank,
+stratification --- so the apparatus is airtight on the statistical manifold and only as
+rigorous as the map $h \mapsto q$ is nice on the representation side. And the Fisher metric is
+defined through $\ell = \log q$ and its score $\partial \log q$ --- densities, which is to say
+Radon--Nikodym derivatives. In the finite, strictly-positive softmax world those exist for
+free and the metric is elementary; let the vocabulary become a continuum and whether the metric
+exists at all becomes the same Radon--Nikodym question the third note ends on. The geometry,
+like everything else in this set, rests on a foundation that is silent here and load-bearing
+the moment the sum becomes an integral.
+
+\end{document}

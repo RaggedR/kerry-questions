@@ -1,0 +1,10 @@
+# LaTeX build artifacts (PDFs are tracked deliberately)
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg

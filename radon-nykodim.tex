@@ -1,0 +1,329 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{microtype}
+\usepackage{newpxtext, newpxmath}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\definecolor{inkblue}{HTML}{1F3A5F}
+\definecolor{boxbg}{HTML}{F2F5F9}
+\definecolor{boxrule}{HTML}{8AA4C4}
+
+\titleformat{\section}{\large\bfseries\color{inkblue}}{}{0em}{}
+\titlespacing{\section}{0pt}{1.4em}{0.5em}
+
+\newtcolorbox{insight}{
+  colback=boxbg, colframe=boxrule, boxrule=0.6pt,
+  arc=2pt, left=10pt, right=10pt, top=8pt, bottom=8pt,
+  breakable, enhanced,
+  title={\textbf{Insight}}, coltitle=inkblue, fonttitle=\bfseries\small,
+  attach title to upper=\hspace{0.6em}
+}
+
+\newtheorem*{theorem}{Theorem (Radon--Nikodym)}
+
+\setlength{\parskip}{0.55em}
+\setlength{\parindent}{0pt}
+
+\title{\color{inkblue}\bfseries The Radon--Nikodym Theorem}
+\author{The derivative hiding underneath next-token prediction}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+One could sum up this whole document in a sentence:
+\begin{tcolorbox}[colback=yellow!18, colframe=yellow!55!black, arc=2pt, boxrule=0.5pt,
+  left=10pt, right=10pt, top=8pt, bottom=8pt]
+Whenever one measure respects the null sets of another, it can be written as a weighted
+integral of it --- and that weight, the Radon--Nikodym derivative, is the object a language
+model's loss is secretly integrating.
+\end{tcolorbox}
+The companion note \emph{Next-Token Prediction is Geometry} never names this theorem. It did
+not need to: in a finite vocabulary the theorem is a triviality. But the moment one asks
+\emph{what the loss measures}, the derivative $d\nu/d\mu$ is the thing under the integral,
+and absolute continuity is the constraint that keeps a trained model honest.
+
+\section{Absolute continuity}
+
+Fix a measurable space $(X, \mathcal{F})$ --- a set $X$ together with a collection
+$\mathcal{F}$ of subsets we are allowed to measure. A \emph{measure} $\mu$ assigns to each
+$A \in \mathcal{F}$ a size $\mu(A) \in [0, \infty]$, additively over disjoint pieces. It is
+\emph{$\sigma$-finite} if $X$ is a countable union of sets of finite measure --- enough room
+to work piece by piece. Counting measure on a finite set, length on $\mathbb{R}$, and any
+probability measure are all $\sigma$-finite.
+
+Given two measures $\mu$ and $\nu$ on the same space, say $\nu$ is \emph{absolutely
+continuous} with respect to $\mu$, written $\nu \ll \mu$, when
+\[
+  \mu(A) = 0 \;\Longrightarrow\; \nu(A) = 0 .
+\]
+In words: wherever $\mu$ sees nothing, $\nu$ must also see nothing. $\mu$'s null sets are a
+floor that $\nu$ is not allowed to build on.
+
+\begin{insight}
+Absolute continuity is a one-directional agreement about \emph{nothing}, not about
+\emph{something}. It says the two measures agree on which sets are negligible; it says
+nothing about how they weigh the sets that are not. That asymmetry is exactly why the
+derivative below runs one way, $d\nu/d\mu$, and need not exist the other way.
+\end{insight}
+
+\section{The theorem}
+
+\begin{theorem}
+Let $\mu$ and $\nu$ be $\sigma$-finite measures on $(X, \mathcal{F})$ with $\nu \ll \mu$.
+Then there exists a measurable function $f : X \to [0, \infty)$, unique up to equality
+$\mu$-almost everywhere, such that
+\[
+  \nu(A) \;=\; \int_A f \, d\mu \qquad \text{for every } A \in \mathcal{F}.
+\]
+\end{theorem}
+
+The function $f$ is the \emph{Radon--Nikodym derivative}, written
+\[
+  f = \frac{d\nu}{d\mu}.
+\]
+The content of the theorem is that absolute continuity --- a purely set-theoretic condition
+about null sets --- is \emph{exactly} the condition under which $\nu$ can be reconstructed as
+a weighted integral of $\mu$. The weight is the derivative. Nothing weaker than $\nu \ll \mu$
+will do, and nothing stronger is needed.
+
+The name is earned, not borrowed. The derivative obeys the laws one expects of a derivative,
+all holding $\mu$-almost everywhere:
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Linearity:} $\dfrac{d(\nu_1 + \nu_2)}{d\mu} = \dfrac{d\nu_1}{d\mu} +
+  \dfrac{d\nu_2}{d\mu}$.
+  \item \textbf{Chain rule:} if $\nu \ll \mu \ll \lambda$ then
+  $\dfrac{d\nu}{d\lambda} = \dfrac{d\nu}{d\mu}\,\dfrac{d\mu}{d\lambda}$.
+  \item \textbf{Reciprocal:} if $\nu \ll \mu$ and $\mu \ll \nu$ (so each respects the other's
+  null sets, written $\mu \equiv \nu$) then $\dfrac{d\nu}{d\mu} = \left(\dfrac{d\mu}{d\nu}
+  \right)^{-1}$.
+\end{itemize}
+
+\begin{insight}
+``Unique up to $\mu$-almost everywhere'' is the honest form of uniqueness. The value of $f$
+on any $\mu$-null set is invisible to every integral $\int_A f\,d\mu$, so it can be changed
+freely. The derivative is therefore not a single function but a point in $L^1(\mu)$ --- an
+equivalence class of functions agreeing off the null sets. This is the same shrug that the
+companion note makes about the manifold being ``loose'': the object is pinned down exactly as
+much as it is observable, and no more.
+\end{insight}
+
+\section{Why the hypothesis is the whole theorem}
+
+It is tempting to read $\nu \ll \mu$ as a technicality. It is not; it is the content. Suppose
+it failed: some set $A$ has $\mu(A) = 0$ but $\nu(A) > 0$. Then no density $f$ could ever
+reproduce $\nu$, because
+\[
+  \int_A f \, d\mu = 0 \quad\text{for \emph{any} } f,
+\]
+since integrating over a $\mu$-null set returns zero no matter how large $f$ is made there.
+The mass $\nu$ places on $A$ is mass that integration against $\mu$ is structurally unable to
+account for. Absolute continuity is precisely the promise that no such orphaned mass exists.
+
+The canonical failure is a point mass. Let $\mu$ be Lebesgue measure (length) on
+$\mathbb{R}$ and $\nu = \delta_0$ the Dirac measure at the origin, $\nu(A) = 1$ if $0 \in A$
+and $0$ otherwise. The single point $\{0\}$ has length $\mu(\{0\}) = 0$ but
+$\nu(\{0\}) = 1$. There is no function $f$ with $\int_A f\,d\mu = \delta_0(A)$: one would need
+$f$ to be zero everywhere except at a single point yet integrate to one, which Lebesgue
+integration forbids. The Dirac ``delta function'' is exactly the derivative that the theorem
+refuses to grant, because its measure is not absolutely continuous.
+
+\section{Three worlds: where the density lives and where it dies}
+
+The hypothesis $\nu \ll \mu$ sorts every distribution into one of three regimes, and walking
+them in order is the quickest way to see what Radon--Nikodym is \emph{for} --- and why a
+discrete model never meets it while a continuous one cannot avoid it.
+
+\subsection*{Discrete: points carry mass}
+
+On a finite or countable set, each outcome is an island holding its own probability,
+$p(x) = P(\{x\})$. The mass function is a self-sufficient object --- a real number attached to
+each point --- and every quantity is a sum, $P(A) = \sum_{x \in A} p(x)$. Here the derivative
+$dP/dQ$ is the elementary ratio $p(x)/q(x)$, and the theorem asserts nothing a calculator
+cannot: against counting measure every function is a legal density, and absolute continuity
+$P \ll Q$ can fail only where $q(x) = 0 < p(x)$ --- a division by zero visible to the naked
+eye. This is the codeword world, and Radon--Nikodym sleeps through it.
+
+\subsection*{Absolutely continuous: mass on sets, and a density reborn}
+
+On a continuum --- $\mathbb{R}$, say --- the island picture collapses. Every single point has
+probability zero, $P(\{x\}) = 0$, so the naive mass function is identically zero and tells you
+nothing, even as the distribution spreads real probability across intervals, $P([a,b]) > 0$.
+Probability is no longer a function of \emph{outcomes}; it is a function of \emph{sets}. That
+is the whole reason measure theory is unavoidable here and absent in the discrete world: the
+point-function has died, and only the set-function survives.
+
+To recover something point-like, introduce a yardstick --- Lebesgue measure $\lambda$,
+``length'' --- and ask not for the probability \emph{at} $x$ (which is zero) but for the
+probability \emph{per unit length} near $x$. That rate is the density,
+\[
+  P([a,b]) = \int_a^b f \, d\lambda, \qquad f = \frac{dP}{d\lambda}.
+\]
+The ``pdf'' of a first course is exactly this: a Radon--Nikodym derivative against length,
+existing precisely when $P \ll \lambda$. The yardstick is so universally taken for granted
+that no one notices the derivative is relative to anything --- like asking ``velocity with
+respect to what?'' when everyone is standing on the same platform.
+
+\begin{insight}
+This is why the continuous KL-divergence could not be written as $\log(p/q)$: both
+point-masses are zero, so the ratio is $0/0$. Radon--Nikodym replaces mass-over-mass with
+\emph{density-over-density against a common yardstick},
+\[
+  \frac{p(x)}{q(x)} = \frac{dP/d\lambda}{dQ/d\lambda} = \frac{dP}{dQ},
+\]
+and the arbitrary $\lambda$ cancels top and bottom, leaving an intrinsic ratio of $P$ to $Q$.
+The density formulation needs a yardstick; the ratio $dP/dQ$ does not --- which is the next
+regime's whole point.
+\end{insight}
+
+\subsection*{Singular: continuous, yet no density exists}
+
+The split ``discrete or continuous'' is too coarse. There is a third kind: distributions with
+no atoms --- every point still carries mass zero --- that \emph{also} possess no density. Put
+the uniform distribution on a circle in the plane $\mathbb{R}^2$. The circle carries all the
+probability, yet it has \emph{area} zero, so $P \not\ll \lambda$ and no function $f$ can
+satisfy $P(A) = \int_A f \, d\lambda$: the would-be density would have to be infinite along a
+one-dimensional curve and zero off it --- a Dirac ridge, not a function. (On the line the
+classic specimen is the Cantor distribution: no atoms, no density.) The Lebesgue decomposition
+theorem --- Radon--Nikodym's sibling --- makes the taxonomy exhaustive: every measure splits
+uniquely into an absolutely continuous part (it has a density), a singular part (it lives on a
+$\lambda$-null set, no density), and atoms.
+
+\begin{insight}
+In the singular regime $dP/d\lambda$ and $dQ/d\lambda$ can \emph{both} fail to exist, yet the
+direct ratio $dP/dQ$ can still survive, provided $P \ll Q$ --- the two measures living on the
+same thin set, compatibly. So the abstract form $D_{\mathrm{KL}}(P\|Q) = \int \log(dP/dQ)\,dP$
+keeps working where the density form $\int p \log(p/q)\, d\lambda$ has nothing to stand on.
+That is not abstraction for its own sake; it is the only formulation that outlives the ambient
+density.
+\end{insight}
+
+\section{The hidden derivative in the language model}
+
+Now the connection the companion note left implicit.
+
+\subsection*{The softmax is a Radon--Nikodym derivative --- and it is what keeps the model safe}
+
+The vocabulary is a finite set of $n$ tokens. Put the \emph{counting measure} $\mu$ on it:
+every token has mass $1$, so $\mu(A)$ is just the number of tokens in $A$. The model's output
+is a probability measure $Q$ over tokens, produced by the \emph{softmax} of the logits
+$z_w = \langle h, e_w\rangle$. That output is exactly the density of $Q$ against counting
+measure:
+\[
+  \frac{dQ}{d\mu}(w) \;=\; q_w \;=\; \operatorname{softmax}_w \langle h, e_w \rangle
+    \;=\; \frac{e^{z_w}}{\sum_k e^{z_k}} .
+\]
+So the one-equation bridge of the companion geometry note \emph{is} a Radon--Nikodym
+derivative: softmax is the discrete density, the $dQ$ that every cross-entropy and divergence
+in these notes measures against. But two features of it are quietly doing the theorem's work
+for it.
+
+\textbf{It is strictly positive, so absolute continuity cannot fail.} Because $e^{z} > 0$ for
+every finite logit, $q_w > 0$ for \emph{every} token --- $Q$ has no null sets at all. That is
+not cosmetic: it forces $P_{\text{data}} \ll Q$ \emph{automatically}, so the one hypothesis
+that can ever fail --- the absolute continuity that the Dirac mass and the circle were about
+--- \emph{cannot fail for a softmax model}. Equivalently, the loss $-\log q_y$ can never reach
+the infinity of an un-encodable symbol, because softmax never assigns a token probability
+exactly zero. The model is structurally incapable of declaring the observed token impossible.
+
+\textbf{It is the maximum-entropy form, so it is built from the entropy of the coding story.}
+Over the simplex,
+\[
+  \operatorname{softmax}(z) \;=\; \operatorname*{arg\,max}_{q}\ \bigl[\langle q, z\rangle + H(q)\bigr],
+  \qquad H(q) = -\sum_w q_w \log q_w,
+\]
+the distribution that scores as high as possible on the logits while staying as high-entropy
+--- as noncommittal --- as it can, with the very entropy $H$ of the coding story as the
+regulariser.
+
+The exponential is forced here, not assumed. Maximising $\langle q, z\rangle + H(q)$ under the
+lone constraint $\sum_w q_w = 1$ has Lagrangian $\sum_w q_w z_w - \sum_w q_w \log q_w +
+\lambda\bigl(1 - \sum_w q_w\bigr)$; setting each $\partial/\partial q_w = z_w - \log q_w - 1 -
+\lambda = 0$ gives $\log q_w = z_w - 1 - \lambda$, so $q_w \propto e^{z_w}$, and normalising
+fixes the constant at $1/\sum_k e^{z_k}$. The only function whose logarithm is linear in the
+$z_w$ is the exponential --- that is where softmax's $\exp$ comes from. Positivity is automatic
+(an exponential is never zero), so the $q_w \ge 0$ constraints never bind, and the objective is
+concave on a convex set, so this stationary point is the unique global maximum. Phrased as a
+constrained problem instead --- maximise $H(q)$ \emph{alone}, subject to a fixed expected score
+$\langle q, z\rangle = c$ --- the same computation returns $q_w \propto e^{\beta z_w}$, the
+Gibbs distribution, with the multiplier $\beta$ (an inverse temperature) chosen to meet the
+constraint. Softmax is the flattest distribution consistent with a given average logit.
+
+This is also why the loss is clean: $-\log q_y = \log\sum_k e^{z_k} - z_y$, and
+the log-partition $\log\sum_k e^{z_k}$ is the exponential-family normaliser whose gradient is
+the mean embedding $\bar e$ --- the ``spring law'' of the geometry note.
+
+Nobody needed to invoke Radon--Nikodym for any of this, because in the finite,
+strictly-positive case the theorem is empty: every positive function summing to one is a valid
+density, uniqueness is pointwise rather than almost-everywhere, and the hypothesis holds by
+construction. The theorem earns its keep only on continuous spaces; softmax is precisely what
+casts the discrete shadow.
+
+\subsection*{The loss is an integral of the log-derivative}
+
+Here is the part that is not trivial. The note's per-example loss $L = -\log q_y$, summed over
+the corpus, is cross-entropy, and minimizing it is minimizing the Kullback--Leibler divergence
+between the empirical data distribution $P_{\text{data}}$ and the model's distribution $Q$:
+\[
+  D_{\mathrm{KL}}(P_{\text{data}} \,\|\, Q)
+  \;=\; \int \log\!\frac{dP_{\text{data}}}{dQ} \; dP_{\text{data}} .
+\]
+The integrand $\log\frac{dP_{\text{data}}}{dQ}$ is the logarithm of a Radon--Nikodym
+derivative. The divergence is only defined when $P_{\text{data}} \ll Q$ --- the model must
+place positive probability on everything the data actually does. The note even writes a
+logarithm of such a ratio without naming it: its log-odds
+\[
+  z_i - z_j = \log\frac{q_i}{q_j}
+\]
+are the logarithm of a density ratio between two tokens under the model's own distribution.
+
+\begin{tcolorbox}[colback=yellow!18, colframe=yellow!55!black, arc=2pt, boxrule=0.5pt,
+  breakable, left=10pt, right=10pt, top=8pt, bottom=8pt]
+The note says: ``if the model has a low probability of predicting the correct next token then
+the loss is large.'' Measure theory says \emph{why it must be}. If the model is not absolutely
+continuous over the data --- if $q_y = 0$ for some token $y$ that actually occurred --- then
+$\frac{dP_{\text{data}}}{dQ}$ blows up and the KL divergence is infinite. Assigning zero
+probability to something that happened is the one unforgivable sin, and
+\[
+  L = -\log q_y \longrightarrow \infty \quad\text{as}\quad q_y \to 0
+\]
+is that infinity showing through. The loss going to infinity and the derivative failing to
+exist are the same event in two languages.
+\end{tcolorbox}
+
+\begin{insight}
+So the geometry story and the measure story are one fact in two notations --- exactly the move
+the companion note makes with ``likely next word'' versus ``nearby direction.'' Here it is
+``cross-entropy loss'' versus ``integral of a log Radon--Nikodym derivative.'' Training a
+language model is performing a Monte Carlo estimate of $D_{\mathrm{KL}}(P_{\text{data}} \| Q)$
+and descending it, and absolute continuity is the hypothesis that makes the quantity it is
+descending finite in the first place.
+\end{insight}
+
+\subsection*{The interesting direction: letting the vocabulary become continuous}
+
+The finite vocabulary keeps a language model in the first of the three worlds, where every
+token is a point with mass and the theorem sleeps. Replace the finite list with a continuum
+--- embeddings as a density on $\mathbb{R}^d$, or a diffusion model's score over a continuous
+state --- and you fall straight into the third. The ``meaning manifold'' of the companion
+geometry note --- a trained model concentrating probability on a lower-dimensional
+sub-manifold of the ambient space --- is a \emph{singular} measure: positive probability on a
+set of ambient measure zero, hence no density against Lebesgue. There is no
+$\operatorname{softmax}$-over-a-list to write: its denominator, a finite sum, becomes an
+integral $\int e^{z(x)}\,dx$ that need not even converge, and the resulting energy-based
+density need not exist against Lebesgue at all. Every guarantee softmax gave for free --- a
+finite normaliser, strict positivity, automatic absolute continuity --- becomes a genuine
+Radon--Nikodym question. The only thing that can still speak of one model's likelihood
+relative to another is the intrinsic ratio $dP/dQ$,
+which survives --- by the previous section --- exactly when the two models share the manifold.
+The ``meaning manifold'' and ``the distribution Radon--Nikodym refuses a density'' are the
+same phenomenon from two sides, and going continuous is what turns the silent foundation into
+the load-bearing one.
+
+\end{document}
